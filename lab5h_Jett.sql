@@ -411,9 +411,43 @@ call list_students;--ana has a gpa of 100.00
 --
 -- Copy the skeleton and write the IF block.
 -- =================================================================
+-- reports a student's standing as a word, through an OUT parameter
+--dropping student_standing, then creating student_standing procedure 
+--that gives the standing of a student when called with their student_id.
+--drop procedure student_standing;
+CREATE PROCEDURE student_standing(IN p_student_id INT,
+                                  OUT p_standing VARCHAR(20))
+BEGIN
+    -- the gpa goes here once we have looked it up
+    DECLARE v_gpa DECIMAL(5,2);
+    -- look it up. no matching student leaves v_gpa NULL
+    SELECT gpa
+    INTO v_gpa
+    FROM students
+    WHERE student_id = p_student_id;
+    -- choose the label
+    if v_gpa is null then 
+        set p_standing = "No such student";
+    else if v_gpa >= 90 then 
+        set p_standing "Honors";
+    elseif v_gpa >= 85 then 
+        set p_standing = "Good standing";
+    else 
+        set P_standing = "Needs support";
+    end if; 
+END
+--call it for students 7, 3, 1 , and 9 each with a select of the out variable, run together.
+call student_standing(7,@s);--Honors
+select @s;
 
--- your comment goes here
--- your statements go here
+call student_standing(3,@s);--Honors
+select @s;
+
+call student_standing(1,@s);--Good standing
+select @s;
+
+call student_standing(4,@s);--Needs support
+select @s;
 
 
 -- =================================================================
@@ -421,20 +455,59 @@ call list_students;--ana has a gpa of 100.00
 --
 -- Write the DROP. Copy the skeleton and fill the two gaps.
 -- =================================================================
+--making a new procedure that tests the score and adds it when its real.
+-- adds a score only when it is a real score
+CREATE PROCEDURE add_score(IN p_test_name VARCHAR(20),
+                           IN p_student_id INT,
+                           IN p_score FLOAT)
+BEGIN
+    IF p_score < 0 or p_score > 100 
+    THEN
+        -- refuse, and say why
+        SELECT 'Score must be between 0 and 100' AS message;
+    ELSE
+        insert into test_scores (test_name, student_id,score)
+        values (p_test_name, P_student_id, p_score);
 
--- your comment goes here
--- your statements go here
+        update students
+        set gpa = calculate_gpa(p_student_id)
+        where student_id = p_student_id;
 
+    END IF;
+END
 
+--testing with three calls
+call add_score("quiz5", 4, -20);
+call add_score("quiz5", 4, 120);
+
+call list_students()
 -- =================================================================
 -- STEP 10. Rebuild record_attendance so it checks the student
 --
 -- Yours from start to finish. The handout walks you through it.
 -- =================================================================
+--rebuild the prcedure record_attendance so that it checks 
+create procedure if not exists record_attendance(in p_student_id INT, in p_status varchar(10))
 
--- your comment goes here
--- your statements go here
+begin
+    declare v_found int default 0;
+    select count(*)
+    into v_found
+    from students 
+    where student_id = p_student_id;
 
+    if v_found = 0 then 
+        select "No such student" as message; 
+    else 
+        insert into attendance (student_id, status)
+        values (p_student_id, p_status);
+    end if;
+end;
+-- call student 9 as present
+call record_attendance(9,"present");
+--callling student 3 as late 
+call record_attendance(3,"late");
+select * from attendance;
 
 -- =================================================================
 -- STEP 11 and 12. Push to GitHub and submit the URL
